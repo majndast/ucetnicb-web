@@ -11,6 +11,8 @@ import {
   Loader2,
   ChevronDown,
   ChevronUp,
+  Send,
+  CheckCircle2,
 } from "lucide-react";
 import { AdminNav } from "@/components/admin-nav";
 
@@ -30,6 +32,9 @@ export default function AdminDashboard() {
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [replyStatus, setReplyStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
 
   const fetchContacts = useCallback(async () => {
     try {
@@ -60,6 +65,28 @@ export default function AdminDashboard() {
       body: JSON.stringify({ read: !currentRead }),
     });
     fetchContacts();
+  }
+
+  async function sendReply(id: string) {
+    if (!replyText.trim()) return;
+    setReplyStatus("sending");
+    try {
+      const res = await fetch(`/api/admin/contacts/${id}/reply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: replyText }),
+      });
+      if (!res.ok) throw new Error();
+      setReplyStatus("sent");
+      setReplyText("");
+      setTimeout(() => {
+        setReplyingTo(null);
+        setReplyStatus("idle");
+        fetchContacts();
+      }, 2000);
+    } catch {
+      setReplyStatus("error");
+    }
   }
 
   async function deleteContact(id: string) {
@@ -198,6 +225,53 @@ export default function AdminDashboard() {
                         {contact.message}
                       </p>
                     </div>
+                    {/* Reply form */}
+                    {replyingTo === contact.id && (
+                      <div className="bg-white rounded-lg border border-border p-3 space-y-2">
+                        {replyStatus === "sent" ? (
+                          <div className="flex items-center gap-2 py-3 justify-center text-accent text-sm">
+                            <CheckCircle2 className="h-4 w-4" />
+                            Odpověď odeslána!
+                          </div>
+                        ) : (
+                          <>
+                            <p className="text-xs text-text-muted">
+                              Odpověď pro {contact.name} ({contact.email})
+                            </p>
+                            <textarea
+                              value={replyText}
+                              onChange={(e) => setReplyText(e.target.value)}
+                              rows={4}
+                              placeholder="Napište odpověď..."
+                              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-colors resize-none"
+                            />
+                            {replyStatus === "error" && (
+                              <p className="text-xs text-red-500">Nepodařilo se odeslat. Zkuste znovu.</p>
+                            )}
+                            <div className="flex gap-2 justify-end">
+                              <button
+                                onClick={() => { setReplyingTo(null); setReplyText(""); setReplyStatus("idle"); }}
+                                className="px-3 py-1.5 text-xs rounded-lg border border-border text-text-muted hover:bg-bg-muted transition-colors"
+                              >
+                                Zrušit
+                              </button>
+                              <button
+                                onClick={() => sendReply(contact.id)}
+                                disabled={replyStatus === "sending" || !replyText.trim()}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-accent text-white hover:bg-accent-light transition-colors disabled:opacity-50"
+                              >
+                                {replyStatus === "sending" ? (
+                                  <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Odesílám...</>
+                                ) : (
+                                  <><Send className="h-3.5 w-3.5" /> Odeslat odpověď</>
+                                )}
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+
                     <div className="flex items-center gap-2 pt-1">
                       <button
                         onClick={() => toggleRead(contact.id, contact.read)}
@@ -215,13 +289,17 @@ export default function AdminDashboard() {
                           </>
                         )}
                       </button>
-                      <a
-                        href={`mailto:${contact.email}`}
+                      <button
+                        onClick={() => {
+                          setReplyingTo(replyingTo === contact.id ? null : contact.id);
+                          setReplyText("");
+                          setReplyStatus("idle");
+                        }}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-accent text-white hover:bg-accent-light transition-colors"
                       >
-                        <Mail className="h-3.5 w-3.5" />
+                        <Send className="h-3.5 w-3.5" />
                         Odpovědět
-                      </a>
+                      </button>
                       <button
                         onClick={() => deleteContact(contact.id)}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg text-red-500 hover:bg-red-50 transition-colors ml-auto"
