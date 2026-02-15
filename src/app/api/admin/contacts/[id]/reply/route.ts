@@ -30,13 +30,22 @@ export async function POST(
     const resend = new Resend(process.env.RESEND_API_KEY);
 
     const fromEmail = process.env.EMAIL_FROM || "onboarding@resend.dev";
-    await resend.emails.send({
+    const { data, error: sendError } = await resend.emails.send({
       from: `Účetnictví Kotmanová <${fromEmail}>`,
       to: contact.email,
       replyTo: process.env.CONTACT_EMAIL || "info@ucetnicb.cz",
       subject: `Re: Vaše poptávka - Účetnictví Kotmanová`,
       html: buildReplyHtml(contact.name, contact.message, message.trim()),
     });
+
+    if (sendError) {
+      console.error("Resend error:", sendError);
+      return NextResponse.json(
+        { error: `Email se nepodařilo odeslat: ${sendError.message}` },
+        { status: 422 }
+      );
+    }
+    console.log("Reply sent successfully, id:", data?.id, "to:", contact.email);
 
     // Mark as read after replying
     await prisma.contact.update({

@@ -35,6 +35,7 @@ export default function AdminDashboard() {
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const [replyStatus, setReplyStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [replyError, setReplyError] = useState("");
 
   const fetchContacts = useCallback(async () => {
     try {
@@ -70,13 +71,19 @@ export default function AdminDashboard() {
   async function sendReply(id: string) {
     if (!replyText.trim()) return;
     setReplyStatus("sending");
+    setReplyError("");
     try {
       const res = await fetch(`/api/admin/contacts/${id}/reply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: replyText }),
       });
-      if (!res.ok) throw new Error();
+      const json = await res.json();
+      if (!res.ok) {
+        setReplyError(json.error || "Nepodařilo se odeslat");
+        setReplyStatus("error");
+        return;
+      }
       setReplyStatus("sent");
       setReplyText("");
       setTimeout(() => {
@@ -85,6 +92,7 @@ export default function AdminDashboard() {
         fetchContacts();
       }, 2000);
     } catch {
+      setReplyError("Nepodařilo se odeslat. Zkuste znovu.");
       setReplyStatus("error");
     }
   }
@@ -246,7 +254,7 @@ export default function AdminDashboard() {
                               className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-colors resize-none"
                             />
                             {replyStatus === "error" && (
-                              <p className="text-xs text-red-500">Nepodařilo se odeslat. Zkuste znovu.</p>
+                              <p className="text-xs text-red-500">{replyError || "Nepodařilo se odeslat. Zkuste znovu."}</p>
                             )}
                             <div className="flex gap-2 justify-end">
                               <button
