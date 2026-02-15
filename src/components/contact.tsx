@@ -1,9 +1,58 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Phone, Mail, MapPin, Clock } from "lucide-react";
+import { Phone, Mail, MapPin, Clock, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { contactSchema, type ContactFormData } from "@/lib/validations/contact";
 
 export function Contact() {
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [errors, setErrors] = useState<Partial<Record<keyof ContactFormData, string>>>({});
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setErrors({});
+
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      name: formData.get("name") as string,
+      email: formData.get("email") as string,
+      phone: formData.get("phone") as string,
+      message: formData.get("message") as string,
+    };
+
+    const result = contactSchema.safeParse(data);
+    if (!result.success) {
+      const fieldErrors: Partial<Record<keyof ContactFormData, string>> = {};
+      for (const [key, messages] of Object.entries(result.error.flatten().fieldErrors)) {
+        fieldErrors[key as keyof ContactFormData] = messages?.[0];
+      }
+      setErrors(fieldErrors);
+      return;
+    }
+
+    setStatus("loading");
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(result.data),
+      });
+
+      if (!res.ok) throw new Error();
+
+      setStatus("success");
+      e.currentTarget.reset();
+    } catch {
+      setStatus("error");
+    }
+  }
+
+  const inputClass =
+    "w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-colors";
+  const errorInputClass =
+    "w-full rounded-lg border border-red-400 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 transition-colors";
+
   return (
     <section id="kontakt" className="py-20">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
@@ -24,56 +73,106 @@ export function Contact() {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <form className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-primary mb-1">
-                    Jméno
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Jan Novák"
-                    className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-colors"
-                  />
+            {status === "success" ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <CheckCircle2 className="h-12 w-12 text-accent mb-4" />
+                <h3 className="text-lg font-semibold text-primary mb-2">
+                  Zpráva odeslána!
+                </h3>
+                <p className="text-sm text-text-muted mb-6">
+                  Děkuji za vaši zprávu. Ozvu se vám co nejdříve.
+                </p>
+                <button
+                  onClick={() => setStatus("idle")}
+                  className="text-sm font-medium text-accent hover:text-accent-light transition-colors"
+                >
+                  Odeslat další zprávu
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-primary mb-1">
+                      Jméno *
+                    </label>
+                    <input
+                      type="text"
+                      name="name"
+                      placeholder="Jan Novák"
+                      className={errors.name ? errorInputClass : inputClass}
+                    />
+                    {errors.name && (
+                      <p className="mt-1 text-xs text-red-500">{errors.name}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-primary mb-1">
+                      Telefon
+                    </label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      placeholder="+420 ..."
+                      className={errors.phone ? errorInputClass : inputClass}
+                    />
+                    {errors.phone && (
+                      <p className="mt-1 text-xs text-red-500">{errors.phone}</p>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-primary mb-1">
-                    Telefon
+                    E-mail *
                   </label>
                   <input
-                    type="tel"
-                    placeholder="+420 ..."
-                    className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-colors"
+                    type="email"
+                    name="email"
+                    placeholder="jan@firma.cz"
+                    className={errors.email ? errorInputClass : inputClass}
                   />
+                  {errors.email && (
+                    <p className="mt-1 text-xs text-red-500">{errors.email}</p>
+                  )}
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-primary mb-1">
-                  E-mail
-                </label>
-                <input
-                  type="email"
-                  placeholder="jan@firma.cz"
-                  className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-colors"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-primary mb-1">
-                  Zpráva
-                </label>
-                <textarea
-                  rows={4}
-                  placeholder="Popište, co potřebujete..."
-                  className="w-full rounded-lg border border-border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-colors resize-none"
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-full rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-white hover:bg-accent-light transition-colors"
-              >
-                Odeslat zprávu
-              </button>
-            </form>
+                <div>
+                  <label className="block text-sm font-medium text-primary mb-1">
+                    Zpráva *
+                  </label>
+                  <textarea
+                    name="message"
+                    rows={4}
+                    placeholder="Popište, co potřebujete..."
+                    className={`${errors.message ? errorInputClass : inputClass} resize-none`}
+                  />
+                  {errors.message && (
+                    <p className="mt-1 text-xs text-red-500">{errors.message}</p>
+                  )}
+                </div>
+
+                {status === "error" && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 text-red-600 text-sm">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                    Něco se pokazilo. Zkuste to prosím znovu.
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={status === "loading"}
+                  className="w-full rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-white hover:bg-accent-light transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {status === "loading" ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Odesílám...
+                    </>
+                  ) : (
+                    "Odeslat zprávu"
+                  )}
+                </button>
+              </form>
+            )}
           </motion.div>
 
           {/* Contact info + map */}
