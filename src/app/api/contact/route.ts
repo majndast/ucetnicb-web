@@ -32,8 +32,9 @@ export async function POST(request: NextRequest) {
     });
 
     // Send email notification
+    const fromEmail = process.env.EMAIL_FROM || "onboarding@resend.dev";
     await resend.emails.send({
-      from: "Web <noreply@ucetnicb.cz>",
+      from: `Účetnictví Kotmanová <${fromEmail}>`,
       to: process.env.CONTACT_EMAIL || "info@ucetnicb.cz",
       replyTo: data.email,
       subject: `Nová poptávka od ${data.name}`,
