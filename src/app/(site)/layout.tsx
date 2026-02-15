@@ -1,5 +1,7 @@
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
+import { ScrollToTop } from "@/components/scroll-to-top";
+import { CookieConsent } from "@/components/cookie-consent";
 
 export default function SiteLayout({
   children,
@@ -11,6 +13,8 @@ export default function SiteLayout({
       <Navbar />
       <main>{children}</main>
       <Footer />
+      <ScrollToTop />
+      <CookieConsent />
     </>
   );
 }

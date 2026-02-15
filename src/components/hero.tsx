@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, ShieldCheck } from "lucide-react";
+import { ArrowRight, ShieldCheck, Phone } from "lucide-react";
 
 export function Hero() {
   return (
@@ -59,10 +59,11 @@ export function Hero() {
               <ArrowRight className="h-4 w-4" />
             </a>
             <a
-              href="#sluzby"
+              href="tel:+420724159681"
               className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/20 px-6 py-3 text-base font-semibold text-white hover:bg-white/10 transition-colors"
             >
-              Prohlédnout služby
+              <Phone className="h-4 w-4" />
+              +420 724 159 681
             </a>
           </motion.div>
         </div>

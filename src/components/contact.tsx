@@ -8,10 +8,18 @@ import { contactSchema, type ContactFormData } from "@/lib/validations/contact";
 export function Contact() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errors, setErrors] = useState<Partial<Record<keyof ContactFormData, string>>>({});
+  const [gdprConsent, setGdprConsent] = useState(false);
+  const [gdprError, setGdprError] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setErrors({});
+    setGdprError(false);
+
+    if (!gdprConsent) {
+      setGdprError(true);
+      return;
+    }
 
     const form = e.currentTarget;
     const formData = new FormData(form);
@@ -61,6 +69,7 @@ export function Contact() {
     "w-full rounded-lg border border-red-400 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 transition-colors";
 
   return (
+    <>
     <section id="kontakt" className="py-20">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-14">
@@ -166,6 +175,42 @@ export function Contact() {
                   )}
                 </div>
 
+                {/* GDPR consent */}
+                <div>
+                  <label className="flex items-start gap-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={gdprConsent}
+                      onChange={(e) => {
+                        setGdprConsent(e.target.checked);
+                        if (e.target.checked) setGdprError(false);
+                      }}
+                      className="mt-0.5 h-4 w-4 rounded border-border text-accent focus:ring-accent/30 accent-accent"
+                    />
+                    <span className="text-xs text-text-muted leading-relaxed">
+                      Souhlasím se zpracováním osobních údajů (jméno, e-mail,
+                      telefon) za účelem vyřízení poptávky. Údaje budou použity
+                      výhradně pro komunikaci ohledně vaší poptávky a nebudou
+                      předány třetím stranám.{" "}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const el = document.getElementById("gdpr-info");
+                          if (el) el.scrollIntoView({ behavior: "smooth" });
+                        }}
+                        className="text-accent hover:underline font-medium"
+                      >
+                        Více informací
+                      </button>
+                    </span>
+                  </label>
+                  {gdprError && (
+                    <p className="mt-1 ml-6.5 text-xs text-red-500">
+                      Pro odeslání formuláře je nutný souhlas se zpracováním údajů.
+                    </p>
+                  )}
+                </div>
+
                 {status === "error" && (
                   <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 text-red-600 text-sm">
                     <AlertCircle className="h-4 w-4 flex-shrink-0" />
@@ -265,5 +310,56 @@ export function Contact() {
         </div>
       </div>
     </section>
+
+    {/* GDPR info */}
+    <section id="gdpr-info" className="py-12 bg-bg-soft border-t border-border">
+      <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+        <h3 className="text-lg font-semibold text-primary mb-4">
+          Informace o zpracování osobních údajů
+        </h3>
+        <div className="space-y-3 text-sm text-text-muted leading-relaxed">
+          <p>
+            <strong className="text-text">Správce údajů:</strong> Šárka Kotmanová,
+            IČ: — , se sídlem Novohradská, České Budějovice.
+          </p>
+          <p>
+            <strong className="text-text">Účel zpracování:</strong> Vyřízení vaší
+            poptávky a následná komunikace ohledně nabízených služeb.
+          </p>
+          <p>
+            <strong className="text-text">Rozsah zpracovávaných údajů:</strong>{" "}
+            Jméno, e-mailová adresa, telefonní číslo (nepovinné) a text zprávy.
+          </p>
+          <p>
+            <strong className="text-text">Doba zpracování:</strong> Vaše údaje
+            budou uchovány po dobu nezbytnou k vyřízení poptávky, maximálně 3 roky
+            od posledního kontaktu, pokud nevznikne smluvní vztah.
+          </p>
+          <p>
+            <strong className="text-text">Příjemci údajů:</strong> Vaše údaje
+            nebudou předány třetím stranám. Pro doručení e-mailů využíváme službu
+            Resend (zpracovatel).
+          </p>
+          <p>
+            <strong className="text-text">Vaše práva:</strong> Máte právo na
+            přístup k údajům, jejich opravu, výmaz, omezení zpracování a právo
+            podat stížnost u Úřadu pro ochranu osobních údajů (ÚOOÚ).
+          </p>
+          <p>
+            <strong className="text-text">Kontakt:</strong> Pro uplatnění vašich
+            práv nás kontaktujte na{" "}
+            <a href="mailto:info@ucetnicb.cz" className="text-accent hover:underline">
+              info@ucetnicb.cz
+            </a>{" "}
+            nebo telefonicky na{" "}
+            <a href="tel:+420724159681" className="text-accent hover:underline">
+              +420 724 159 681
+            </a>
+            .
+          </p>
+        </div>
+      </div>
+    </section>
+    </>
   );
 }
