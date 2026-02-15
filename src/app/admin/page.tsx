@@ -32,11 +32,21 @@ export default function AdminDashboard() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const fetchContacts = useCallback(async () => {
-    const res = await fetch(`/api/admin/contacts?filter=${filter}`);
-    const data = await res.json();
-    setContacts(data.contacts);
-    setUnreadCount(data.unreadCount);
-    setLoading(false);
+    try {
+      const res = await fetch(`/api/admin/contacts?filter=${filter}`);
+      if (!res.ok) {
+        console.error("API error:", res.status);
+        setLoading(false);
+        return;
+      }
+      const data = await res.json();
+      setContacts(data.contacts || []);
+      setUnreadCount(data.unreadCount || 0);
+    } catch (err) {
+      console.error("Fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
   }, [filter]);
 
   useEffect(() => {
