@@ -3,12 +3,34 @@ import { Resend } from "resend";
 import { prisma } from "@/lib/prisma";
 import { contactSchema } from "@/lib/validations/contact";
 import { buildContactEmailHtml } from "@/lib/email/contact-notification";
+import { rateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting by IP - 5 submissions per hour
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      "unknown";
+    const { success: allowed } = rateLimit(`contact:${ip}`, {
+      limit: 5,
+      windowMs: 60 * 60 * 1000,
+    });
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Příliš mnoho požadavků. Zkuste to za chvíli." },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
+
+    // Honeypot - if filled, it's a bot
+    if (body.website) {
+      return NextResponse.json({ success: true }, { status: 201 });
+    }
+
     const resend = new Resend(process.env.RESEND_API_KEY);
 
     const result = contactSchema.safeParse(body);

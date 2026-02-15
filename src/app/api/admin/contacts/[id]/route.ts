@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { z } from "zod";
+
+const patchSchema = z.object({
+  read: z.boolean(),
+});
+
+const idSchema = z.string().min(1).max(30);
 
 export async function PATCH(
   request: NextRequest,
@@ -12,14 +19,31 @@ export async function PATCH(
   }
 
   const { id } = await params;
-  const body = await request.json();
+  if (!idSchema.safeParse(id).success) {
+    return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
+  }
 
-  const contact = await prisma.contact.update({
-    where: { id },
-    data: { read: body.read },
-  });
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
 
-  return NextResponse.json(contact);
+  const result = patchSchema.safeParse(body);
+  if (!result.success) {
+    return NextResponse.json({ error: "Invalid data" }, { status: 400 });
+  }
+
+  try {
+    const contact = await prisma.contact.update({
+      where: { id },
+      data: { read: result.data.read },
+    });
+    return NextResponse.json(contact);
+  } catch {
+    return NextResponse.json({ error: "Kontakt nenalezen" }, { status: 404 });
+  }
 }
 
 export async function DELETE(
@@ -32,7 +56,14 @@ export async function DELETE(
   }
 
   const { id } = await params;
-  await prisma.contact.delete({ where: { id } });
+  if (!idSchema.safeParse(id).success) {
+    return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
+  }
 
-  return NextResponse.json({ success: true });
+  try {
+    await prisma.contact.delete({ where: { id } });
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ error: "Kontakt nenalezen" }, { status: 404 });
+  }
 }

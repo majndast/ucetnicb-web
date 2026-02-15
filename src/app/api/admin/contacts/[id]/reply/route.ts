@@ -2,8 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { z } from "zod";
 
 export const dynamic = "force-dynamic";
+
+const replySchema = z.object({
+  message: z.string().min(1, "Zpráva je povinná").max(5000, "Zpráva je příliš dlouhá"),
+});
+
+const idSchema = z.string().min(1).max(30);
 
 export async function POST(
   request: NextRequest,
@@ -16,11 +23,26 @@ export async function POST(
     }
 
     const { id } = await params;
-    const { message } = await request.json();
-
-    if (!message || typeof message !== "string" || message.trim().length < 1) {
-      return NextResponse.json({ error: "Zpráva je povinná" }, { status: 400 });
+    if (!idSchema.safeParse(id).success) {
+      return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
     }
+
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
+
+    const result = replySchema.safeParse(body);
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.error.issues?.[0]?.message || "Neplatná data" },
+        { status: 400 }
+      );
+    }
+
+    const message = result.data.message.trim();
 
     const contact = await prisma.contact.findUnique({ where: { id } });
     if (!contact) {
@@ -35,17 +57,17 @@ export async function POST(
       to: contact.email,
       replyTo: process.env.CONTACT_EMAIL || "info@ucetnicb.cz",
       subject: `Re: Vaše poptávka - Účetnictví Kotmanová`,
-      html: buildReplyHtml(contact.name, contact.message, message.trim()),
+      html: buildReplyHtml(contact.name, contact.message, message),
     });
 
     if (sendError) {
       console.error("Resend error:", sendError);
       return NextResponse.json(
-        { error: `Email se nepodařilo odeslat: ${sendError.message}` },
+        { error: "Nepodařilo se odeslat email" },
         { status: 422 }
       );
     }
-    console.log("Reply sent successfully, id:", data?.id, "to:", contact.email);
+    console.log("Reply sent, id:", data?.id, "to:", contact.email);
 
     // Mark as read after replying
     await prisma.contact.update({

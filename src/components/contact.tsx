@@ -15,12 +15,18 @@ export function Contact() {
 
     const form = e.currentTarget;
     const formData = new FormData(form);
-    const data = {
+    const data: Record<string, string> = {
       name: formData.get("name") as string,
       email: formData.get("email") as string,
       phone: formData.get("phone") as string,
       message: formData.get("message") as string,
     };
+
+    // Honeypot
+    const website = formData.get("website") as string;
+    if (website) {
+      data.website = website;
+    }
 
     const result = contactSchema.safeParse(data);
     if (!result.success) {
@@ -92,6 +98,15 @@ export function Contact() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Honeypot - hidden from humans, bots fill it */}
+                <input
+                  type="text"
+                  name="website"
+                  autoComplete="off"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  className="absolute opacity-0 h-0 w-0 overflow-hidden pointer-events-none"
+                />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-primary mb-1">
