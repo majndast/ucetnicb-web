@@ -13,7 +13,8 @@ export function Contact() {
     e.preventDefault();
     setErrors({});
 
-    const formData = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const formData = new FormData(form);
     const data = {
       name: formData.get("name") as string,
       email: formData.get("email") as string,
@@ -42,7 +43,7 @@ export function Contact() {
       if (!res.ok) throw new Error();
 
       setStatus("success");
-      e.currentTarget.reset();
+      form.reset();
     } catch {
       setStatus("error");
     }
